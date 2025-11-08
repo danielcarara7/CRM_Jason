@@ -1,7 +1,7 @@
 {
   "name": "crm-jason-webhook",
   "version": "1.0.0",
-  "description": "Sistema de webhooks para CRM Jason",
+  "description": "Sistema de webhooks para CRM Jason com banco de dados",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -12,6 +12,7 @@
     "cors": "^2.8.5",
     "helmet": "^7.0.0",
     "express-rate-limit": "^6.7.0",
-    "dotenv": "^16.0.3"
+    "dotenv": "^16.0.3",
+    "pg": "^8.11.0"
   }
 }
