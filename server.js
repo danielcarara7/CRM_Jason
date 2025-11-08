@@ -3,9 +3,26 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Conexão com Supabase PostgreSQL
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+// Testar conexão ao iniciar
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error('❌ Erro ao conectar ao Supabase:', err);
+  } else {
+    console.log('✅ Conectado ao Supabase PostgreSQL!');
+    release();
+  }
+});
 
 // Middlewares
 app.use(helmet());
@@ -22,7 +39,53 @@ const limiter = rateLimit({
 
 app.use('/webhook/', limiter);
 
-let webhooks = [];
+let webhooks = []; // Array temporário mantido para compatibilidade
+
+// Função auxiliar para salvar mensagem no banco
+async function salvarMensagem(dados) {
+  const msg = dados.eventDetails;
+  
+  await pool.query(`
+    INSERT INTO mensagens (
+      message_id, numero_contato, nome_contato, 
+      texto_mensagem, tipo_mensagem, timestamp_mensagem,
+      is_from_me, usuario_crm, dados_completos
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    ON CONFLICT (message_id) DO NOTHING
+  `, [
+    msg.id?._serialized || msg.id || `msg_${Date.now()}`,
+    dados.number,
+    dados.name,
+    msg.body || '',
+    msg.type,
+    msg.t,
+    msg.id?.fromMe || false,
+    dados.user,
+    JSON.stringify(dados)
+  ]);
+}
+
+// Função auxiliar para salvar evento CRM no banco
+async function salvarEventoCRM(dados) {
+  const crm = dados.eventDetails;
+  
+  await pool.query(`
+    INSERT INTO eventos_crm (
+      numero_contato, nome_contato, evento_id,
+      evento_tipo, evento_nome, labels,
+      usuario_crm, dados_completos
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  `, [
+    dados.number,
+    dados.name,
+    crm.id,
+    crm.type,
+    crm.name,
+    JSON.stringify(dados.labels || []),
+    dados.user,
+    JSON.stringify(dados)
+  ]);
+}
 
 // Webhook especifico para MENSAGENS
 app.post('/webhook/mensagens', async (req, res) => {
@@ -32,136 +95,14 @@ app.post('/webhook/mensagens', async (req, res) => {
     console.log('Numero:', req.body.number);
     
     req.body.eventID = 'messages';
-    webhooks.push({
+    const dadosCompletos = {
       ...req.body,
       receivedAt: new Date()
-    });
+    };
     
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook de mensagem processado',
-      tipo: 'mensagens'
-    });
+    webhooks.push(dadosCompletos);
     
-  } catch (error) {
-    console.error('[ERRO]', error);
-    return res.status(200).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Webhook especifico para CRM
-app.post('/webhook/crm', async (req, res) => {
-  try {
-    console.log('[WEBHOOK] CRM recebido!');
-    console.log('Nome:', req.body.name);
-    console.log('Acao:', req.body.eventDetails?.type);
-    
-    req.body.eventID = 'crm';
-    webhooks.push({
-      ...req.body,
-      receivedAt: new Date()
-    });
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook de CRM processado',
-      tipo: 'crm'
-    });
-    
-  } catch (error) {
-    console.error('[ERRO]', error);
-    return res.status(200).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Webhook generico
-app.post('/webhook/waspeed', async (req, res) => {
-  try {
-    console.log('[WEBHOOK] Generico recebido!');
-    webhooks.push({
-      ...req.body,
-      receivedAt: new Date()
-    });
-    
-    return res.status(200).json({
-      success: true,
-      message: 'Webhook processado'
-    });
-    
-  } catch (error) {
-    console.error('[ERRO]', error);
-    return res.status(200).json({
-      success: false,
-      error: error.message
-    });
-  }
-});
-
-// Listar webhooks
-app.get('/webhooks', (req, res) => {
-  res.json({
-    total: webhooks.length,
-    dados: webhooks
-  });
-});
-
-// Rota de teste
-app.get('/webhook/test', (req, res) => {
-  res.json({
-    status: 'online',
-    message: 'Servidor de webhooks funcionando!',
-    timestamp: new Date().toISOString(),
-    endpoints: {
-      mensagens: '/webhook/mensagens',
-      crm: '/webhook/crm',
-      generico: '/webhook/waspeed',
-      listar: '/webhooks'
-    }
-  });
-});
-
-// Rota raiz
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>CRM Jason Webhook System</title>
-      <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
-        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        h1 { color: #4285f4; }
-        .endpoint { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; border-left: 4px solid #4285f4; }
-        code { background: #e8eaed; padding: 2px 6px; border-radius: 3px; font-family: monospace; }
-        .success { color: #0f9d58; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>CRM Jason Webhook System</h1>
-        <p class="success">✅ Sistema online e funcionando!</p>
-        <h2>Endpoints:</h2>
-        <div class="endpoint"><strong>Mensagens:</strong><br><code>POST /webhook/mensagens</code></div>
-        <div class="endpoint"><strong>CRM:</strong><br><code>POST /webhook/crm</code></div>
-        <div class="endpoint"><strong>Listar dados:</strong><br><code>GET /webhooks</code></div>
-      </div>
-    </body>
-    </html>
-  `);
-});
-
-app.listen(PORT, () => {
-  console.log('================================');
-  console.log('[OK] Servidor rodando na porta', PORT);
-  console.log('[ENDPOINTS]');
-  console.log('  POST /webhook/mensagens');
-  console.log('  POST /webhook/crm');
-  console.log('  GET  /webhooks');
-  console.log('================================');
-});
+    // Salvar no banco de dados
+    try {
+      await salvarMensagem(dadosCompletos);
+      console
