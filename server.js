@@ -5,6 +5,20 @@ const { Pool } = require('pg');
 const app = express();
 app.set('trust proxy', true);
 
+// 🔥 CORS global (resolve preflight do navegador/CRM)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*'); // se quiser, troca por origem específica do CRM
+  res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  // Responde imediatamente o preflight
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
 // Suporta JSON e x-www-form-urlencoded
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
