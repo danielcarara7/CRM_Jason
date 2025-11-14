@@ -1,4 +1,3 @@
-``````javascript
 require('dotenv').config();
 const express = require('express');
 const { Pool } = require('pg');
@@ -16,7 +15,7 @@ pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Erro ao conectar:', err);
   } else {
-    console.log('Supabase Conectado:', res.rows[0].now);
+    console.log('Supabase Conectado:', res.rows.now);
   }
 });
 
@@ -131,4 +130,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
-```
