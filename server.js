@@ -15,7 +15,7 @@ pool.query('SELECT NOW()', (err, res) => {
   if (err) {
     console.error('Erro ao conectar:', err);
   } else {
-    console.log('Supabase Conectado:', res.rows.now);
+    console.log('Supabase Conectado:', res.rows[0].now);
   }
 });
 
@@ -38,8 +38,8 @@ app.post('/webhook/mensagens', async (req, res) => {
 
     const message_id = dados.eventDetails?.id?.id || null;
     const message_serialized = dados.eventDetails?.id?._serialized || null;
-    const timestamp_unix = dados.eventDetails?.t || dados.eventDetails?.timestamp || 0;
-    const received_at = dados.receivedAt || new Date().toISOString();
+    const timestamp_unix = dados.eventDetails?.t || 0;
+    const received_at = new Date().toISOString();
     const contact_name = dados.name || null;
     const contact_number = dados.number || null;
     const from_number = dados.eventDetails?.from || null;
@@ -64,8 +64,8 @@ app.post('/webhook/mensagens', async (req, res) => {
     const media_direct_path = dados.eventDetails?.directPath || null;
     const media_key = dados.eventDetails?.mediaKey || null;
     const file_hash = dados.eventDetails?.filehash || null;
-    const is_reply = dados.eventDetails?.parentMsgKey?.id ? true : false;
-    const parent_msg_id = dados.eventDetails?.parentMsgKey?.id || null;
+    const is_reply = dados.eventDetails?.parentMsgId ? true : false;
+    const parent_msg_id = dados.eventDetails?.parentMsgId || null;
     const parent_msg_serialized = dados.eventDetails?.parentMsgKey?._serialized || null;
     const has_reaction = dados.eventDetails?.hasReaction || false;
     const is_forwarded = dados.eventDetails?.isForwarded || false;
@@ -100,7 +100,7 @@ app.post('/webhook/crm', async (req, res) => {
     console.log('[WEBHOOK] CRM recebido!');
     const event_id = dados.eventDetails?.id || null;
     const event_type = dados.eventDetails?.type || null;
-    const received_at = dados.receivedAt || new Date().toISOString();
+    const received_at = new Date().toISOString();
     const contact_name = dados.name || null;
     const contact_number = dados.number || null;
     const user_assigned = dados.user || null;
