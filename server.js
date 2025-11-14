@@ -35,6 +35,7 @@ app.post('/webhook/mensagens', async (req, res) => {
   try {
     const dados = req.body;
     console.log('[WEBHOOK] Mensagem recebida!');
+    console.log('[DADOS COMPLETOS]', JSON.stringify(dados, null, 2));
 
     const message_id = dados.eventDetails?.id?.id || null;
     const message_serialized = dados.eventDetails?.id?._serialized || null;
@@ -86,10 +87,10 @@ app.post('/webhook/mensagens', async (req, res) => {
 
     await pool.query(`INSERT INTO contatos (numero, nome, is_group, user_assigned, labels, perfil, ultima_mensagem, ultima_interacao) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW()) ON CONFLICT (numero) DO UPDATE SET nome = COALESCE(EXCLUDED.nome, contatos.nome), user_assigned = COALESCE(EXCLUDED.user_assigned, contatos.user_assigned), labels = EXCLUDED.labels, ultima_mensagem = NOW(), ultima_interacao = NOW(), total_mensagens = contatos.total_mensagens + 1, mensagens_enviadas = contatos.mensagens_enviadas + CASE WHEN $7 THEN 1 ELSE 0 END, mensagens_recebidas = contatos.mensagens_recebidas + CASE WHEN $7 THEN 0 ELSE 1 END, atualizado_em = NOW()`, [contact_number, contact_name, is_group, user_assigned, JSON.stringify(labels), JSON.stringify(perfil_contato), from_me]);
 
-    console.log('Mensagem salva:', message_serialized);
+    console.log('[SUCESSO] Mensagem salva:', message_serialized);
     res.status(200).json({ status: 'success', message: 'Mensagem salva' });
   } catch (error) {
-    console.error('Erro ao salvar mensagem:', error);
+    console.error('[ERRO DETALHADO]', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
