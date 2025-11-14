@@ -203,12 +203,14 @@ app.post('/webhook/mensagens', async (req, res) => {
           parent_msg_serialized,
           has_reaction,
           is_forwarded,
-          JSON.stringify(mentioned_users),
+          // 👇 AGORA VAI COMO ARRAY JS, NÃO STRING
+          mentioned_users,
           is_view_once,
           is_avatar,
           is_video_call,
           call_duration,
-          JSON.stringify(labels),
+          // 👇 idem
+          labels,
           unread_count,
           user_assigned,
           JSON.stringify(perfil_contato),
@@ -241,7 +243,8 @@ app.post('/webhook/mensagens', async (req, res) => {
           contact_name,
           is_group,
           user_assigned,
-          JSON.stringify(labels),
+          // 👇 se coluna labels em contatos é text[]/varchar[]
+          labels,
           JSON.stringify(perfil_contato),
           from_me
         ]
@@ -312,8 +315,9 @@ app.post('/webhook/crm', async (req, res) => {
           contact_name,
           contact_number,
           user_assigned,
-          JSON.stringify(labels),
-          JSON.stringify(label_names),
+          // 👇 se colunas labels/label_names em eventos_crm são arrays
+          labels,
+          label_names,
           label_count,
           unread_messages,
           last_message_type,
@@ -341,7 +345,8 @@ app.post('/webhook/crm', async (req, res) => {
             contact_number,
             contact_name,
             user_assigned,
-            JSON.stringify(labels),
+            // 👇 idem aqui
+            labels,
             JSON.stringify(perfil_contato)
           ]
         );
